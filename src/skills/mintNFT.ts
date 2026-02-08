@@ -3,8 +3,16 @@
  * Handles minting NFTs on Base network
  */
 import { ethers } from 'ethers';
+import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 dotenv.config();
+
+function getPrivateKey(): string {
+  if (process.env.PRIVATE_KEY_FILE) {
+    return fs.readFileSync(process.env.PRIVATE_KEY_FILE, 'utf8').trim();
+  }
+  return process.env.BASE_PRIVATE_KEY!;
+}
 
 // Minimal ERC721 ABI for minting
 const NFT_ABI = [
@@ -53,7 +61,7 @@ async function retryWithBackoff<T>(
 
 export async function mintNFT(metadataUri: string): Promise<MintResult> {
   const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL);
-  const wallet = new ethers.Wallet(process.env.BASE_PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(getPrivateKey(), provider);
 
   const contract = new ethers.Contract(
     process.env.NFT_CONTRACT_ADDRESS!,
@@ -108,13 +116,13 @@ export async function mintNFT(metadataUri: string): Promise<MintResult> {
 
 export async function getWalletBalance(): Promise<string> {
   const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL);
-  const wallet = new ethers.Wallet(process.env.BASE_PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(getPrivateKey(), provider);
   const balance = await provider.getBalance(wallet.address);
   return ethers.formatEther(balance);
 }
 
 export async function getWalletAddress(): Promise<string> {
-  const wallet = new ethers.Wallet(process.env.BASE_PRIVATE_KEY!);
+  const wallet = new ethers.Wallet(getPrivateKey());
   return wallet.address;
 }
 

@@ -6,50 +6,44 @@
 
 An autonomous AI agent framework designed to generate, evolve, mint, list, and promote unique digital art on the Base blockchain. This project implements a self-contained "skill" module ready for integration with agent runtimes like OpenClaw.
 
-## 🌟 Features
+## Features
 
--   **🎨 Procedural Art Generation**: 
-    -   Utilizes Simplex noise and pureimage for deterministic, high-quality canvas manipulation.
-    -   Integrates with LLMs (OpenRouter, Groq, Ollama) to generate creative concepts and prompts.
-    -   Supports multiple layers, blending modes, and color palettes.
+- **Art Generation**: Procedural art via Simplex noise + optional AI image generation (Stability AI, DALL-E) with LLM-driven creative concepts.
+- **Evolutionary Logic**: Self-improving algorithm that adapts art style based on sales performance. State is persisted atomically with backup/restore.
+- **Blockchain Integration**: ERC721 minting, marketplace listing, and real-time sales monitoring on Base — includes deployable Solidity contracts.
+- **Social Autonomy**: Automatically tweets new listings, sales, and evolution milestones via X (Twitter) API.
+- **Modular Skill Architecture**: Each capability is an independent TypeScript module, easy to extend or call from an agent runtime.
 
--   **🧬 Evolutionary Logic**: 
-    -   Self-improving algorithm that adapts art style based on sales performance.
-    -   Tracks generations, sales history, and evolving preferences (e.g., color complexity, geometric density).
-    -   Configurable evolution rules via JSON.
+## Installation
 
--   **🔗 Blockchain Integration**: 
-    -   **Minting**: Full ERC721 minting support on Base network with gas estimation and retry logic.
-    -   **Listing**: Automatic marketplace listing upon minting.
-    -   **Monitoring**: Real-time event listeners for sales to trigger evolution.
+```bash
+git clone https://github.com/Numba1ne/nft-skill.git
+cd nft-skill
+npm install
+npm run build
+```
 
--   **🐦 Social Autonomy**: 
-    -   Automatically tweets new listings, sales, and evolution milestones via X (Twitter) API.
-    -   Generates engaging, context-aware social media content.
+## Contract Deployment (one-time setup)
 
--   **Modular Skill Architecture**: 
-    -   Designed as a collection of focused TypeScript modules (`generateArt`, `evolve`, `mintNFT`, `social`, etc.).
-    -   Easy to extend and integrate into larger agent systems.
+Deploy the bundled ERC721 and Marketplace contracts to Base:
 
-## 🚀 Installation
+```bash
+# Testnet first (recommended)
+npm run deploy:testnet
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/Numba1ne/nft-skill.git
-    cd nft-skill
-    ```
+# Then mainnet
+npm run deploy:mainnet
+```
 
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
+Contract addresses are automatically written to your `.env` file.
 
-3.  **Build the project**:
-    ```bash
-    npm run build
-    ```
+To verify on Basescan (optional):
+```bash
+npx hardhat verify --network base-mainnet <NFT_ADDRESS> <DEPLOYER_ADDRESS>
+npx hardhat verify --network base-mainnet <MARKETPLACE_ADDRESS>
+```
 
-## 🛠 Configuration
+## Configuration
 
 Copy `.env.example` to `.env` and fill in your values:
 
@@ -57,62 +51,92 @@ Copy `.env.example` to `.env` and fill in your values:
 cp .env.example .env
 ```
 
-Required environment variables:
+### Required variables
 
 | Variable | Description |
 | :--- | :--- |
-| `BASE_RPC_URL` | Base network RPC URL (e.g. `https://mainnet.base.org`) |
-| `BASE_PRIVATE_KEY` | Wallet private key for signing transactions |
-| `NFT_CONTRACT_ADDRESS` | Your ERC721 contract address |
-| `MARKETPLACE_ADDRESS` | Marketplace contract address |
+| `BASE_RPC_URL` | Base network RPC URL |
+| `BASE_PRIVATE_KEY` | Wallet private key — or use `PRIVATE_KEY_FILE` (see security note) |
+| `NFT_CONTRACT_ADDRESS` | Deployed NFTArt contract address |
+| `MARKETPLACE_ADDRESS` | Deployed NFTMarketplace contract address |
 | `PINATA_API_KEY` | Pinata API key for IPFS uploads |
 | `PINATA_SECRET` | Pinata secret key |
 | `LLM_PROVIDER` | `openrouter`, `groq`, or `ollama` |
-| `OPENROUTER_API_KEY` | OpenRouter API key (if using openrouter) |
-| `X_CONSUMER_KEY` | X (Twitter) API credentials |
-| `X_CONSUMER_SECRET` | |
-| `X_ACCESS_TOKEN` | |
-| `X_ACCESS_SECRET` | |
 
-## 📟 CLI Usage
+### Optional variables
+
+| Variable | Description |
+| :--- | :--- |
+| `PRIVATE_KEY_FILE` | Path to a file containing the private key (safer than env var) |
+| `IMAGE_PROVIDER` | `stability`, `dalle`, or `procedural` (default) |
+| `STABILITY_API_KEY` | Stability AI key (if `IMAGE_PROVIDER=stability`) |
+| `OPENAI_API_KEY` | OpenAI key for DALL-E (if `IMAGE_PROVIDER=dalle`) |
+| `OPENROUTER_API_KEY` | OpenRouter API key |
+| `GROQ_API_KEY` | Groq API key |
+| `OLLAMA_BASE_URL` | Ollama base URL |
+| `X_CONSUMER_KEY` / `X_CONSUMER_SECRET` / `X_ACCESS_TOKEN` / `X_ACCESS_SECRET` | X (Twitter) credentials |
+| `BASESCAN_API_KEY` | For contract verification |
+
+> **Security note:** Never commit `.env` with real values. For production, store the private key in a file with restricted permissions (`chmod 600 keyfile`) and set `PRIVATE_KEY_FILE=/path/to/keyfile`.
+
+## CLI Usage
 
 ```bash
-# Generate new art and upload to IPFS
+# Generate art and upload to IPFS
 npm run cli -- generate --generation 1 --theme "neon cyberpunk city"
 
-# Trigger agent evolution
-npm run cli -- evolve --proceeds "0.5" --generation 1 --trigger "Sold 10 items"
+# Mint an NFT with the returned metadata URI
+npm run cli -- mint --metadata-uri QmXyz123abc
+
+# List the minted NFT on the marketplace
+npm run cli -- list --token-id 1 --price 0.05
+
+# Watch for sales in real-time (streams JSON until Ctrl+C)
+npm run cli -- monitor --from-block 12000000
+
+# Trigger agent evolution after hitting a sales milestone
+npm run cli -- evolve --proceeds "0.5" --generation 1 --trigger "Sold 3 NFTs"
 
 # Post a tweet
-npm run cli -- tweet --content "New art drop incoming! #AIArt"
+npm run cli -- tweet --content "New AI art drop incoming! #AIArt #Base"
 ```
 
-## 🧪 Testing
+All commands output JSON: look for the final line with `{"status":"success",...}` or `{"status":"error",...}`.
 
-Run the comprehensive test suite to verify all skills:
+## Testing
 
 ```bash
 npm test
 ```
 
-## 🏗 Architecture
+## Architecture
 
-The project is organized into modular skills within `src/skills/`:
+```
+src/
+├── cli.ts                  # Entry point for all 6 CLI commands
+├── index.ts                # Barrel export for TypeScript imports
+└── skills/
+    ├── generateArt.ts      # Art generation (procedural + AI providers)
+    ├── imageAI.ts          # AI image provider abstraction (Stability, DALL-E)
+    ├── evolve.ts           # Evolution state machine with atomic persistence
+    ├── mintNFT.ts          # ERC721 minting with retry logic
+    ├── listNFT.ts          # Marketplace listing
+    ├── monitorSales.ts     # Real-time on-chain sales event listener
+    ├── social.ts           # X (Twitter) announcements
+    └── llm.ts              # LLM abstraction (OpenRouter / Groq / Ollama)
 
-| Skill Module | Description |
-| :--- | :--- |
-| `generateArt.ts` | Core engine for procedural art generation and IPFS upload. |
-| `evolve.ts` | Manages evolutionary state, rules, and parameter adaptation. |
-| `mintNFT.ts` | Handles blockchain transactions for minting NFTs. |
-| `listNFT.ts` | Interacts with the marketplace smart contract to list items. |
-| `social.ts` | Manages X (Twitter) interactions and announcements. |
-| `monitorSales.ts` | Listens for on-chain sales events to trigger feedback loops. |
-| `llm.ts` | Abstraction layer for LLM API interactions. |
+contracts/
+├── NFTArt.sol              # ERC721 contract (OpenZeppelin)
+└── NFTMarketplace.sol      # Simple marketplace with listItem/buyItem/cancelListing
 
-## 🤝 Contributing
+scripts/
+└── deploy.ts               # Hardhat deployment script
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Contributing
 
-## 📄 License
+Contributions are welcome. Please submit a Pull Request.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## License
+
+MIT — see the LICENSE file for details.
