@@ -9,7 +9,8 @@ import {
   announceNewArt,
   announceSale,
   announceEvolution,
-  announceLaunch
+  announceLaunch,
+  resetClientForTesting
 } from '../src/skills/social';
 import { setupTestEnv, cleanupTestEnv } from './utils/mocks';
 
@@ -35,6 +36,7 @@ describe('social.ts', () => {
   });
 
   afterEach(() => {
+    resetClientForTesting();
     cleanupTestEnv();
   });
 

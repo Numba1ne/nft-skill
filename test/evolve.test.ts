@@ -19,6 +19,29 @@ import { setupTestEnv, cleanupTestEnv, createMockEvolutionState } from './utils/
 jest.mock('fs');
 const mockFs = fs as jest.Mocked<typeof fs>;
 
+// Path-aware mocks: evolve uses evolution.json (state) and evolution-rules.json (rules)
+const EVOLUTION_RULES = {
+  scarcityBonus: 0.002,
+  demandBonus: 0.003,
+  basePrice: 0.005,
+  generationBonus: 0.001,
+  themes: { "2": "neon cityscape", "3": "organic flow", "4": "fractal universe" },
+  salesThresholdMultiplier: 3
+};
+
+function setupPathAwareMocks(configExists: boolean, configData?: any, rulesExist = true) {
+  mockFs.existsSync.mockImplementation((p: string) => {
+    if (p.includes('evolution-rules')) return rulesExist;
+    if (p.includes('evolution.json')) return configExists;
+    return false;
+  });
+  mockFs.readFileSync.mockImplementation((p: string) => {
+    if (p.includes('evolution-rules')) return JSON.stringify(EVOLUTION_RULES);
+    if (p.includes('evolution.json') && configData) return JSON.stringify(configData);
+    return '{}';
+  });
+}
+
 describe('evolve.ts', () => {
   beforeEach(() => {
     setupTestEnv();
@@ -31,7 +54,7 @@ describe('evolve.ts', () => {
 
   describe('getEvolutionState', () => {
     it('should return default state when config file does not exist', () => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
 
       const state = getEvolutionState();
 
@@ -50,8 +73,7 @@ describe('evolve.ts', () => {
         total_proceeds: '0.03'
       });
 
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(savedState));
+      setupPathAwareMocks(true, savedState);
 
       const state = getEvolutionState();
 
@@ -61,7 +83,7 @@ describe('evolve.ts', () => {
     });
 
     it('should handle corrupted config file gracefully', () => {
-      mockFs.existsSync.mockReturnValue(true);
+      mockFs.existsSync.mockImplementation((p: string) => p.includes('evolution.json'));
       mockFs.readFileSync.mockReturnValue('invalid json');
 
       const state = getEvolutionState();
@@ -72,7 +94,7 @@ describe('evolve.ts', () => {
 
   describe('updateStats', () => {
     it('should update stats without evolving', () => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
       mockFs.mkdirSync.mockImplementation(() => undefined);
       mockFs.writeFileSync.mockImplementation(() => undefined);
 
@@ -89,9 +111,19 @@ describe('evolve.ts', () => {
 
   describe('evolveAgent', () => {
     beforeEach(() => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
       mockFs.mkdirSync.mockImplementation(() => undefined);
       mockFs.writeFileSync.mockImplementation(() => undefined);
+    });
+
+    it('should unlock new theme at generation 2', () => {
+      const result = evolveAgent({
+        proceeds: '0.015',
+        generation: 1,
+        trigger: 'sales_milestone'
+      });
+
+      expect(result.newAbilities).toContain('New theme unlocked: "neon cityscape"');
     });
 
     it('should increase generation number', () => {
@@ -138,16 +170,6 @@ describe('evolve.ts', () => {
       expect(writtenData.element_variety).toBe(4);
     });
 
-    it('should unlock new theme at generation 2', () => {
-      const result = evolveAgent({
-        proceeds: '0.015',
-        generation: 1,
-        trigger: 'sales_milestone'
-      });
-
-      expect(result.newAbilities).toContain('New theme unlocked: "neon cityscape"');
-    });
-
     it('should record evolution in history', () => {
       evolveAgent({
         proceeds: '0.015',
@@ -155,17 +177,16 @@ describe('evolve.ts', () => {
         trigger: 'sales_milestone'
       });
 
-      const writtenData = JSON.parse(mockFs.writeFileSync.mock.calls[0][1] as string);
+      const writeCalls = mockFs.writeFileSync.mock.calls;
+      expect(writeCalls.length).toBeGreaterThan(0);
+      const writtenData = JSON.parse(writeCalls[writeCalls.length - 1][1] as string);
       expect(writtenData.evolution_history).toHaveLength(1);
       expect(writtenData.evolution_history[0].generation).toBe(2);
       expect(writtenData.evolution_history[0].trigger).toBe('sales_milestone');
     });
 
     it('should cap complexity boost at 10', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({ generation: 10, complexity_boost: 10 })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({ generation: 10, complexity_boost: 10 }));
 
       evolveAgent({
         proceeds: '0.1',
@@ -180,7 +201,7 @@ describe('evolve.ts', () => {
 
   describe('selectTheme', () => {
     it('should return a theme from unlocked themes', () => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
 
       const theme = selectTheme();
 
@@ -189,12 +210,9 @@ describe('evolve.ts', () => {
     });
 
     it('should select from expanded theme list after evolution', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({
-          themes_unlocked: ['cosmic nebula', 'digital forest', 'neon cityscape', 'organic flow']
-        })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({
+        themes_unlocked: ['cosmic nebula', 'digital forest', 'neon cityscape', 'organic flow']
+      }));
 
       const theme = selectTheme();
 
@@ -204,7 +222,7 @@ describe('evolve.ts', () => {
 
   describe('calculateListPrice', () => {
     it('should calculate base price for generation 1', () => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
 
       const price = calculateListPrice();
 
@@ -212,10 +230,7 @@ describe('evolve.ts', () => {
     });
 
     it('should increase price with generation', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({ generation: 5, total_sold: 0 })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({ generation: 5, total_sold: 0 }));
 
       const price = calculateListPrice();
 
@@ -223,10 +238,7 @@ describe('evolve.ts', () => {
     });
 
     it('should add scarcity bonus after 5 sales', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({ generation: 1, total_sold: 6 })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({ generation: 1, total_sold: 6 }));
 
       const price = calculateListPrice();
 
@@ -234,10 +246,7 @@ describe('evolve.ts', () => {
     });
 
     it('should add demand bonus after 10 sales', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({ generation: 1, total_sold: 11 })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({ generation: 1, total_sold: 11 }));
 
       const price = calculateListPrice();
 
@@ -247,7 +256,7 @@ describe('evolve.ts', () => {
 
   describe('shouldEvolve', () => {
     it('should return false when sales threshold not met', () => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
 
       const result = shouldEvolve(2);
 
@@ -255,7 +264,7 @@ describe('evolve.ts', () => {
     });
 
     it('should return true when sales threshold met', () => {
-      mockFs.existsSync.mockReturnValue(false);
+      setupPathAwareMocks(false);
 
       const result = shouldEvolve(3);
 
@@ -263,10 +272,7 @@ describe('evolve.ts', () => {
     });
 
     it('should scale threshold with generation', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({ generation: 3, total_sold: 8 })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({ generation: 3, total_sold: 8 }));
 
       const result = shouldEvolve(9);
 
@@ -274,10 +280,7 @@ describe('evolve.ts', () => {
     });
 
     it('should not trigger if total sold has not increased', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(
-        createMockEvolutionState({ generation: 1, total_sold: 3 })
-      ));
+      setupPathAwareMocks(true, createMockEvolutionState({ generation: 1, total_sold: 3 }));
 
       const result = shouldEvolve(3);
 

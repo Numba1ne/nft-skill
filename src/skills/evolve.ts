@@ -82,12 +82,20 @@ export function getEvolutionState(): EvolutionState {
   try {
     if (fs.existsSync(CONFIG_PATH)) {
       const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
-      return { ...DEFAULT_STATE, ...JSON.parse(data) };
+      const parsed = JSON.parse(data);
+      return {
+        ...DEFAULT_STATE,
+        ...parsed,
+        evolution_history: [...(parsed.evolution_history || DEFAULT_STATE.evolution_history)]
+      };
     }
   } catch (error) {
     console.error('[Evolve] Error reading evolution state:', error);
   }
-  return { ...DEFAULT_STATE };
+  return {
+    ...DEFAULT_STATE,
+    evolution_history: [...DEFAULT_STATE.evolution_history]
+  };
 }
 
 /**
