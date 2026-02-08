@@ -6,6 +6,7 @@ interface SimplexNoiseInstance {
   noise3D(x: number, y: number, z: number): number;
 }
 import { generateArtConcept } from './llm';
+import { generateAIImage } from './imageAI';
 import { getEvolutionState } from './evolve';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -52,16 +53,26 @@ const PALETTES: Record<string, { bg: string; colors: string[]; accent: string }>
  */
 export async function createAndUploadArt(generation: number, theme: string): Promise<ArtResult> {
   const state = getEvolutionState();
-  
+
   // Get creative description from LLM
   const concept = await generateArtConcept(theme, generation);
-  
-  // Generate enhanced procedural art
-  const imagePath = await generateEnhancedArt(concept, state);
-  
+
+  // Prepare output directory
+  const outDir = path.join(path.resolve(__dirname, '../../'), 'temp');
+  if (!fs.existsSync(outDir)) {
+    fs.mkdirSync(outDir, { recursive: true });
+  }
+
+  // Try AI image generation first, fall back to procedural
+  let imagePath = await generateAIImage(concept, outDir);
+  const style = imagePath ? process.env.IMAGE_PROVIDER || 'ai' : 'Flow Fields + Noise';
+  if (!imagePath) {
+    imagePath = await generateEnhancedArt(concept, state);
+  }
+
   // Upload image to IPFS
   const imageUrl = await uploadToIPFS(imagePath);
-  
+
   // Create metadata
   const metadata = {
     name: `AI Artist Gen${generation} #${Date.now()}`,
@@ -72,13 +83,13 @@ export async function createAndUploadArt(generation: number, theme: string): Pro
       { trait_type: 'Theme', value: theme },
       { trait_type: 'Complexity', value: state.complexity_boost.toString() },
       { trait_type: 'Palette', value: state.color_palette },
-      { trait_type: 'Style', value: 'Flow Fields + Noise' }
+      { trait_type: 'Style', value: style }
     ]
   };
-  
+
   // Upload metadata to IPFS
   const metadataUri = await uploadMetadataToIPFS(metadata);
-  
+
   return {
     imagePath,
     metadata,
@@ -121,10 +132,6 @@ async function generateEnhancedArt(concept: string, state: any): Promise<string>
   
   // Save to file relative to project root
   const outDir = path.join(path.resolve(__dirname, '../../'), 'temp');
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
-  }
-  
   const fileName = `art_gen${state.generation}_${Date.now()}.png`;
   const filePath = path.join(outDir, fileName);
   

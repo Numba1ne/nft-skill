@@ -3,6 +3,14 @@
  * Handles listing NFTs on the marketplace
  */
 import { ethers } from 'ethers';
+import * as fs from 'fs';
+
+function getPrivateKey(): string {
+  if (process.env.PRIVATE_KEY_FILE) {
+    return fs.readFileSync(process.env.PRIVATE_KEY_FILE, 'utf8').trim();
+  }
+  return process.env.BASE_PRIVATE_KEY!;
+}
 
 const MARKETPLACE_ABI = [
   'function listItem(address nftAddress, uint256 tokenId, uint256 price) external',
@@ -25,7 +33,7 @@ interface ListResult {
 
 export async function listNFT(tokenId: string, priceInEth: string): Promise<ListResult> {
   const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL);
-  const wallet = new ethers.Wallet(process.env.BASE_PRIVATE_KEY!, provider);
+  const wallet = new ethers.Wallet(getPrivateKey(), provider);
 
   const nftContract = new ethers.Contract(
     process.env.NFT_CONTRACT_ADDRESS!,

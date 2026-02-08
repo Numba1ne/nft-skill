@@ -26,6 +26,8 @@ interface EvolutionState {
 // Resolve paths relative to the project root, not cwd
 const PROJECT_ROOT = path.resolve(__dirname, '../../');
 const CONFIG_PATH = path.join(PROJECT_ROOT, 'config', 'evolution.json');
+const CONFIG_TMP = CONFIG_PATH + '.tmp';
+const CONFIG_BAK = CONFIG_PATH + '.bak';
 const RULES_PATH = path.join(PROJECT_ROOT, 'config', 'evolution-rules.json');
 
 function getEvolutionRules() {
@@ -76,37 +78,60 @@ const DEFAULT_STATE: EvolutionState = {
 };
 
 /**
- * Get current evolution state
+ * Try to parse evolution state from a file path, returns null on failure
  */
-export function getEvolutionState(): EvolutionState {
+function tryReadState(filePath: string): EvolutionState | null {
   try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
-      const parsed = JSON.parse(data);
+    if (fs.existsSync(filePath)) {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
       return {
         ...DEFAULT_STATE,
         ...parsed,
         evolution_history: [...(parsed.evolution_history || DEFAULT_STATE.evolution_history)]
       };
     }
-  } catch (error) {
-    console.error('[Evolve] Error reading evolution state:', error);
+  } catch {
+    // ignore parse errors
   }
-  return {
-    ...DEFAULT_STATE,
-    evolution_history: [...DEFAULT_STATE.evolution_history]
-  };
+  return null;
 }
 
 /**
- * Save evolution state
+ * Get current evolution state, falling back to backup if primary is corrupt
+ */
+export function getEvolutionState(): EvolutionState {
+  const state = tryReadState(CONFIG_PATH) ?? tryReadState(CONFIG_BAK);
+  if (state) return state;
+  console.error('[Evolve] No valid state found, using defaults');
+  return { ...DEFAULT_STATE, evolution_history: [...DEFAULT_STATE.evolution_history] };
+}
+
+/**
+ * Restore evolution state from backup (call if primary is known-corrupt)
+ */
+export function restoreFromBackup(): boolean {
+  const backup = tryReadState(CONFIG_BAK);
+  if (!backup) return false;
+  saveState(backup);
+  return true;
+}
+
+/**
+ * Save evolution state atomically: write to .tmp then rename, keeping .bak of previous
  */
 function saveState(state: EvolutionState): void {
   const configDir = path.dirname(CONFIG_PATH);
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(state, null, 2));
+  // Write to temp file first
+  fs.writeFileSync(CONFIG_TMP, JSON.stringify(state, null, 2));
+  // Backup existing state before overwriting
+  if (fs.existsSync(CONFIG_PATH)) {
+    fs.renameSync(CONFIG_PATH, CONFIG_BAK);
+  }
+  // Atomic rename
+  fs.renameSync(CONFIG_TMP, CONFIG_PATH);
 }
 
 /**
