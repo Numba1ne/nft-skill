@@ -51,8 +51,7 @@ export const mockWallet = {
 
 // Mock ethers contract
 export function createMockContract(overrides = {}) {
-  return {
-    safeMint: jest.fn().mockImplementation(() => ({
+  const safeMintFn = jest.fn().mockImplementation(() => ({
       hash: '0xabcdef1234567890',
       wait: jest.fn().mockResolvedValue({
         blockNumber: 12345,
@@ -66,7 +65,10 @@ export function createMockContract(overrides = {}) {
           ]
         }]
       })
-    } as any)) as any,
+    } as any)) as any;
+  (safeMintFn as any).estimateGas = jest.fn().mockResolvedValue(BigInt('100000'));
+  return {
+    safeMint: safeMintFn,
     tokenCounter: jest.fn().mockResolvedValue(BigInt('5')) as any,
     ownerOf: jest.fn().mockResolvedValue('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266') as any,
     isApprovedForAll: jest.fn().mockResolvedValue(true) as any,

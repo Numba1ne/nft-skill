@@ -35,7 +35,7 @@ An autonomous AI agent framework designed to generate, evolve, mint, list, and p
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/yourusername/nft-skill.git
+    git clone https://github.com/Numba1ne/nft-skill.git
     cd nft-skill
     ```
 
@@ -44,32 +44,47 @@ An autonomous AI agent framework designed to generate, evolve, mint, list, and p
     npm install
     ```
 
+3.  **Build the project**:
+    ```bash
+    npm run build
+    ```
+
 ## 🛠 Configuration
 
-Create a `.env` file in the root directory with the following variables:
+Copy `.env.example` to `.env` and fill in your values:
 
-```env
-# Blockchain Configuration (Base Network)
-BASE_RPC_URL=https://mainnet.base.org or your_provider_url
-BASE_PRIVATE_KEY=your_wallet_private_key
-NFT_CONTRACT_ADDRESS=your_erc721_contract_address
-MARKETPLACE_ADDRESS=your_marketplace_contract_address
+```bash
+cp .env.example .env
+```
 
-# LLM Providers (Select one and provide key)
-LLM_PROVIDER=openrouter # or groq, ollama
-OPENROUTER_API_KEY=your_openrouter_key
-# GROQ_API_KEY=your_groq_key
-# OLLAMA_BASE_URL=http://localhost:11434
+Required environment variables:
 
-# Social Media (X / Twitter API)
-X_CONSUMER_KEY=your_api_key
-X_CONSUMER_SECRET=your_api_secret
-X_ACCESS_TOKEN=your_access_token
-X_ACCESS_SECRET=your_access_token_secret
+| Variable | Description |
+| :--- | :--- |
+| `BASE_RPC_URL` | Base network RPC URL (e.g. `https://mainnet.base.org`) |
+| `BASE_PRIVATE_KEY` | Wallet private key for signing transactions |
+| `NFT_CONTRACT_ADDRESS` | Your ERC721 contract address |
+| `MARKETPLACE_ADDRESS` | Marketplace contract address |
+| `PINATA_API_KEY` | Pinata API key for IPFS uploads |
+| `PINATA_SECRET` | Pinata secret key |
+| `LLM_PROVIDER` | `openrouter`, `groq`, or `ollama` |
+| `OPENROUTER_API_KEY` | OpenRouter API key (if using openrouter) |
+| `X_CONSUMER_KEY` | X (Twitter) API credentials |
+| `X_CONSUMER_SECRET` | |
+| `X_ACCESS_TOKEN` | |
+| `X_ACCESS_SECRET` | |
 
-# IPFS Integration (Pinata)
-PINATA_API_KEY=your_pinata_key
-PINATA_SECRET=your_pinata_secret
+## 📟 CLI Usage
+
+```bash
+# Generate new art and upload to IPFS
+npm run cli -- generate --generation 1 --theme "neon cyberpunk city"
+
+# Trigger agent evolution
+npm run cli -- evolve --proceeds "0.5" --generation 1 --trigger "Sold 10 items"
+
+# Post a tweet
+npm run cli -- tweet --content "New art drop incoming! #AIArt"
 ```
 
 ## 🧪 Testing

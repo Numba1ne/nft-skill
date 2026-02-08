@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { Command } from 'commander';
 import { createAndUploadArt } from './skills/generateArt';
 import { evolveAgent } from './skills/evolve';

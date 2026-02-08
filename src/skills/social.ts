@@ -6,6 +6,13 @@ import { TwitterApi } from 'twitter-api-v2';
 
 let client: TwitterApi | null = null;
 
+/**
+ * Reset the cached client. Used for testing to ensure fresh mocks per test.
+ */
+export function resetClientForTesting(): void {
+  client = null;
+}
+
 function getClient(): TwitterApi {
   if (!client) {
     client = new TwitterApi({

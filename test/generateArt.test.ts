@@ -11,24 +11,30 @@ import { setupTestEnv, cleanupTestEnv, createMockEvolutionState } from './utils/
 // Mock dependencies
 jest.mock('fs');
 jest.mock('axios');
-jest.mock('canvas', () => ({
-  createCanvas: jest.fn(() => ({
-    toBuffer: jest.fn(() => Buffer.from('fake-image-data')),
-    getContext: jest.fn(() => ({
-      fillStyle: '',
-      fillRect: jest.fn(),
-      beginPath: jest.fn(),
-      arc: jest.fn(),
-      fill: jest.fn(),
-      moveTo: jest.fn(),
-      lineTo: jest.fn(),
-      closePath: jest.fn(),
-      save: jest.fn(),
-      restore: jest.fn(),
-      globalAlpha: 1
-    }))
-  }))
+
+// Mock pureimage (project uses pureimage, not canvas)
+const mockContext = {
+  fillStyle: '',
+  strokeStyle: '',
+  lineWidth: 1,
+  globalAlpha: 1,
+  fillRect: jest.fn(),
+  beginPath: jest.fn(),
+  arc: jest.fn(),
+  fill: jest.fn(),
+  moveTo: jest.fn(),
+  lineTo: jest.fn(),
+  closePath: jest.fn(),
+  stroke: jest.fn()
+};
+
+jest.mock('pureimage', () => ({
+  make: jest.fn(() => ({
+    getContext: jest.fn(() => mockContext)
+  })),
+  encodePNGToStream: jest.fn().mockResolvedValue(undefined)
 }));
+
 jest.mock('../src/skills/llm', () => ({
   generateArtConcept: jest.fn().mockResolvedValue('A vibrant cosmic nebula with swirling colors')
 }));
@@ -39,6 +45,18 @@ jest.mock('../src/skills/evolve', () => ({
 const mockFs = fs as jest.Mocked<typeof fs>;
 const mockAxios = axios as jest.Mocked<typeof axios>;
 
+function createMockWriteStream() {
+  return {
+    write: jest.fn((_chunk: any, _encoding?: any, cb?: () => void) => {
+      if (typeof _encoding === 'function') _encoding();
+      else if (cb) cb();
+      return true;
+    }),
+    end: jest.fn((cb?: () => void) => cb?.()),
+    on: jest.fn()
+  };
+}
+
 describe('generateArt.ts', () => {
   beforeEach(() => {
     setupTestEnv();
@@ -47,8 +65,7 @@ describe('generateArt.ts', () => {
     // Mock file system
     mockFs.existsSync.mockReturnValue(false);
     mockFs.mkdirSync.mockImplementation(() => undefined);
-    mockFs.writeFileSync.mockImplementation(() => undefined);
-    mockFs.createReadStream.mockReturnValue({} as any);
+    mockFs.createWriteStream.mockImplementation(() => createMockWriteStream() as any);
 
     // Mock evolution state
     const { getEvolutionState } = require('../src/skills/evolve');
@@ -156,12 +173,11 @@ describe('generateArt.ts', () => {
       expect(mockFs.mkdirSync).toHaveBeenCalled();
     });
 
-    it('should save image to temp directory', async () => {
+    it('should save image to temp directory via createWriteStream', async () => {
       await createAndUploadArt(1, 'test theme');
 
-      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-        expect.stringContaining('art_'),
-        expect.any(Buffer)
+      expect(mockFs.createWriteStream).toHaveBeenCalledWith(
+        expect.stringContaining('art_')
       );
     });
 
@@ -199,11 +215,11 @@ describe('generateArt.ts', () => {
       await createAndUploadArt(1, 'theme1');
       await createAndUploadArt(1, 'theme2');
 
-      const calls = mockFs.writeFileSync.mock.calls;
-      const filename1 = calls[0][0];
-      const filename2 = calls[1][0];
+      const calls = mockFs.createWriteStream.mock.calls;
+      const path1 = calls[0][0];
+      const path2 = calls[1][0];
 
-      expect(filename1).not.toBe(filename2);
+      expect(path1).not.toBe(path2);
     });
   });
 });
