@@ -1,33 +1,86 @@
 ---
 name: nft-skill
-description: Autonomous AI Artist Agent skill for generating, evolving, and promoting NFT art on Base.
+description: >
+  Autonomous AI Artist Agent for generating, evolving, minting, listing, and
+  promoting NFT art on the Base blockchain. Use when the user wants to create
+  AI art, mint ERC-721 NFTs, list on marketplace, monitor on-chain sales,
+  trigger artistic evolution, or announce drops on X/Twitter.
 metadata:
   version: 1.1.0
   author: AI Artist
   license: MIT
-  requires:
-    bins: [node, npm]
+  openclaw:
+    emoji: "🎨"
+    requires:
+      bins:
+        - node
+        - npm
     env:
-      required: [BASE_RPC_URL, BASE_PRIVATE_KEY, NFT_CONTRACT_ADDRESS, MARKETPLACE_ADDRESS, PINATA_API_KEY, PINATA_SECRET, LLM_PROVIDER]
-      optional: [OPENROUTER_API_KEY, GROQ_API_KEY, OLLAMA_BASE_URL, LLM_MODEL, IMAGE_PROVIDER, IMAGE_MODEL, STABILITY_API_KEY, OPENAI_API_KEY, PRIVATE_KEY_FILE, X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET, BASESCAN_API_KEY]
+      BASE_RPC_URL: "${BASE_RPC_URL}"
+      BASE_PRIVATE_KEY: "${BASE_PRIVATE_KEY}"
+      NFT_CONTRACT_ADDRESS: "${NFT_CONTRACT_ADDRESS}"
+      MARKETPLACE_ADDRESS: "${MARKETPLACE_ADDRESS}"
+      PINATA_API_KEY: "${PINATA_API_KEY}"
+      PINATA_SECRET: "${PINATA_SECRET}"
+      LLM_PROVIDER: "${LLM_PROVIDER}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY}"
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL}"
+      IMAGE_PROVIDER: "${IMAGE_PROVIDER}"
+      STABILITY_API_KEY: "${STABILITY_API_KEY}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      X_CONSUMER_KEY: "${X_CONSUMER_KEY}"
+      X_CONSUMER_SECRET: "${X_CONSUMER_SECRET}"
+      X_ACCESS_TOKEN: "${X_ACCESS_TOKEN}"
+      X_ACCESS_SECRET: "${X_ACCESS_SECRET}"
+    install:
+      - id: npm-install
+        kind: shell
+        command: "cd {baseDir} && npm install && npm run build"
+        bins:
+          - node
+        label: "Install NFT Skill dependencies"
 ---
 
 # NFT Skill for OpenClaw
 
 Allows an OpenClaw agent to autonomously generate art, mint NFTs, list on marketplace, monitor sales, evolve based on milestones, and post social updates.
 
-## Installation
+## When to Use This Skill
+
+- User asks to generate AI art or procedural digital art
+- User wants to mint an NFT on Base
+- User wants to list an NFT for sale on the marketplace
+- User wants to monitor on-chain NFT sales
+- User wants to evolve art style after a sales milestone
+- User wants to tweet or announce a new NFT drop on X (Twitter)
+- User mentions "NFT", "mint", "Base blockchain", "AI art", "digital art", or "marketplace listing"
+
+## Setup (First Run)
+
+Before first use, ensure the project is built:
 
 ```bash
-npm install
-npm run build
+cd {baseDir} && npm install && npm run build
 ```
+
+The user must populate a `.env` file with their keys:
+
+```bash
+cp {baseDir}/.env.example {baseDir}/.env
+```
+
+Required variables: `BASE_RPC_URL`, `BASE_PRIVATE_KEY`, `NFT_CONTRACT_ADDRESS`,
+`MARKETPLACE_ADDRESS`, `PINATA_API_KEY`, `PINATA_SECRET`, `LLM_PROVIDER`.
 
 To deploy contracts (one-time setup):
+
 ```bash
-npm run deploy:testnet   # Base Sepolia testnet
-npm run deploy:mainnet   # Base mainnet
+cd {baseDir} && npm run deploy:testnet   # Base Sepolia testnet
+cd {baseDir} && npm run deploy:mainnet   # Base mainnet
 ```
+
+Contract addresses are automatically written to `.env` after deployment.
 
 ## Tools
 
@@ -40,7 +93,7 @@ All tools output JSON. The agent should look for the final line matching `{"stat
 Generate new art and upload to IPFS.
 
 ```bash
-npm run cli -- generate --generation <number> --theme "<description>"
+cd {baseDir} && npm run cli -- generate --generation <number> --theme "<description>"
 ```
 
 **Parameters:**
@@ -57,7 +110,7 @@ npm run cli -- generate --generation <number> --theme "<description>"
 
 **Example:**
 ```bash
-npm run cli -- generate --generation 1 --theme "neon cyberpunk city"
+cd {baseDir} && npm run cli -- generate --generation 1 --theme "neon cyberpunk city"
 ```
 
 ---
@@ -67,7 +120,7 @@ npm run cli -- generate --generation 1 --theme "neon cyberpunk city"
 Mint a new ERC721 token on Base with an IPFS metadata URI.
 
 ```bash
-npm run cli -- mint --metadata-uri <uri>
+cd {baseDir} && npm run cli -- mint --metadata-uri <uri>
 ```
 
 **Parameters:**
@@ -83,7 +136,7 @@ npm run cli -- mint --metadata-uri <uri>
 
 **Example:**
 ```bash
-npm run cli -- mint --metadata-uri QmXyz123abc
+cd {baseDir} && npm run cli -- mint --metadata-uri QmXyz123abc
 ```
 
 ---
@@ -93,7 +146,7 @@ npm run cli -- mint --metadata-uri QmXyz123abc
 List a minted NFT for sale on the marketplace.
 
 ```bash
-npm run cli -- list --token-id <id> --price <eth>
+cd {baseDir} && npm run cli -- list --token-id <id> --price <eth>
 ```
 
 **Parameters:**
@@ -110,17 +163,17 @@ npm run cli -- list --token-id <id> --price <eth>
 
 **Example:**
 ```bash
-npm run cli -- list --token-id 1 --price 0.05
+cd {baseDir} && npm run cli -- list --token-id 1 --price 0.05
 ```
 
 ---
 
 ### 4. monitor — Monitor Sales
 
-Watch for sales events in real-time. Streams JSON to stdout until interrupted.
+Watch for sales events in real-time. Streams JSON to stdout until interrupted (Ctrl+C).
 
 ```bash
-npm run cli -- monitor [--from-block <number>]
+cd {baseDir} && npm run cli -- monitor [--from-block <number>]
 ```
 
 **Parameters:**
@@ -136,7 +189,7 @@ npm run cli -- monitor [--from-block <number>]
 
 **Example:**
 ```bash
-npm run cli -- monitor --from-block 12000000
+cd {baseDir} && npm run cli -- monitor --from-block 12000000
 ```
 
 ---
@@ -146,7 +199,7 @@ npm run cli -- monitor --from-block 12000000
 Trigger the evolution logic when sales milestones are met.
 
 ```bash
-npm run cli -- evolve --proceeds <eth> --generation <number> --trigger "<reason>"
+cd {baseDir} && npm run cli -- evolve --proceeds <eth> --generation <number> --trigger "<reason>"
 ```
 
 **Parameters:**
@@ -155,7 +208,7 @@ npm run cli -- evolve --proceeds <eth> --generation <number> --trigger "<reason>
 |------|------|----------|-------------|
 | `-p, --proceeds` | string | yes | Total ETH proceeds earned so far |
 | `-g, --generation` | number | yes | Current generation number |
-| `-tr, --trigger` | string | yes | Human-readable reason for evolution |
+| `--trigger` | string | yes | Human-readable reason for evolution |
 
 **Output:**
 ```json
@@ -164,7 +217,7 @@ npm run cli -- evolve --proceeds <eth> --generation <number> --trigger "<reason>
 
 **Example:**
 ```bash
-npm run cli -- evolve --proceeds "0.5" --generation 1 --trigger "Sold 3 NFTs"
+cd {baseDir} && npm run cli -- evolve --proceeds "0.5" --generation 1 --trigger "Sold 3 NFTs"
 ```
 
 ---
@@ -174,7 +227,7 @@ npm run cli -- evolve --proceeds "0.5" --generation 1 --trigger "Sold 3 NFTs"
 Post an update to X (Twitter).
 
 ```bash
-npm run cli -- tweet --content "<text>"
+cd {baseDir} && npm run cli -- tweet --content "<text>"
 ```
 
 **Parameters:**
@@ -190,10 +243,29 @@ npm run cli -- tweet --content "<text>"
 
 **Example:**
 ```bash
-npm run cli -- tweet --content "New AI art drop incoming! #AIArt #Base"
+cd {baseDir} && npm run cli -- tweet --content "New AI art drop incoming! #AIArt #Base"
 ```
 
 ---
+
+## Typical Workflow
+
+A full autonomous cycle the agent should follow:
+
+1. **Generate** art with a theme → receive metadata URI
+2. **Mint** the NFT with that URI → receive token ID
+3. **List** the NFT on the marketplace at a price
+4. **Tweet** about the new listing
+5. **Monitor** sales for purchase events
+6. **Evolve** when a sales milestone is reached
+7. Repeat from step 1 with the new generation number
+
+## Error Handling
+
+- If a command returns `{"status":"error",...}`, read the `message` field and report it to the user.
+- Common issues: missing `.env` variables, insufficient wallet balance, network RPC errors.
+- For wallet balance issues, suggest the user funds their Base wallet.
+- For missing env vars, remind the user to populate `{baseDir}/.env`.
 
 ## Environment Variables
 

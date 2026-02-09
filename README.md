@@ -13,6 +13,7 @@ An autonomous AI agent framework designed to generate, evolve, mint, list, and p
 - **Blockchain Integration**: ERC721 minting, marketplace listing, and real-time sales monitoring on Base — includes deployable Solidity contracts.
 - **Social Autonomy**: Automatically tweets new listings, sales, and evolution milestones via X (Twitter) API.
 - **Modular Skill Architecture**: Each capability is an independent TypeScript module, easy to extend or call from an agent runtime.
+- **OpenClaw Ready**: Full `metadata.openclaw` frontmatter in `SKILL.md` for seamless agent integration.
 
 ## Installation
 
@@ -102,6 +103,26 @@ npm run cli -- tweet --content "New AI art drop incoming! #AIArt #Base"
 ```
 
 All commands output JSON: look for the final line with `{"status":"success",...}` or `{"status":"error",...}`.
+
+## Typical Workflow
+
+A full autonomous cycle:
+
+1. **Generate** art with a theme → receive metadata URI
+2. **Mint** the NFT with that URI → receive token ID
+3. **List** the NFT on the marketplace at a price
+4. **Tweet** about the new listing
+5. **Monitor** sales for purchase events
+6. **Evolve** when a sales milestone is reached
+7. Repeat from step 1 with the new generation number
+
+## OpenClaw Integration
+
+This skill includes `SKILL.md` with OpenClaw-compatible metadata (`metadata.openclaw`), env vars, and install steps. When used as an OpenClaw skill, agents autonomously run the generate → mint → list → tweet → monitor → evolve cycle.
+
+See `SKILL.md` for detailed tool parameters, error handling, and environment variable reference.
+
+**Common errors:** Missing `.env` variables, insufficient wallet balance, network RPC errors. Ensure `BASE_RPC_URL`, `BASE_PRIVATE_KEY`, contract addresses, and Pinata keys are set.
 
 ## Testing
 
