@@ -11,6 +11,7 @@ metadata:
   license: MIT
   openclaw:
     emoji: "🎨"
+    homepage: "https://github.com/Numba1ne/nft-skill"
     requires:
       bins:
         - node
